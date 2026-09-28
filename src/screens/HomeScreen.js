@@ -1,7 +1,7 @@
 import { useEffect, useState } from "react";
 import { Pressable, StyleSheet, Text, View } from "react-native";
 
-export default function HomeScreen() {
+export default function HomeScreen({ navigation }) {
   const [sessionSeconds, setSessionSeconds] = useState(0);
   const [totalSeconds, setTotalSeconds] = useState(0);
   const [isRevising, setIsRevising] = useState(false);
@@ -21,7 +21,6 @@ export default function HomeScreen() {
   const displayMinutes = Math.floor(sessionSeconds / 60);
   const displaySeconds = sessionSeconds % 60;
 
-  // Live progress now uses seconds so the progress bar moves while revising
   const liveTotalSeconds = totalSeconds + sessionSeconds;
   const secondsPerLevel = 60 * 60;
   const level = Math.floor(liveTotalSeconds / secondsPerLevel);
@@ -38,7 +37,7 @@ export default function HomeScreen() {
       setIsRevising(true);
     }
   }
-
+  console.log("HOME NAVIGATION:", navigation);
   return (
     <View style={styles.container}>
       <View style={styles.header}>
@@ -79,7 +78,10 @@ export default function HomeScreen() {
         {displayMinutes}:{displaySeconds.toString().padStart(2, "0")}
       </Text>
 
-      <Pressable style={styles.reviseButton} onPress={handleRevisionPress}>
+      <Pressable
+        style={styles.reviseButton}
+        onPress={() => navigation.navigate("Revision")}
+      >
         <Text style={styles.reviseButtonText}>
           {isRevising ? "FINISH SESSION" : "REVISE"}
         </Text>
