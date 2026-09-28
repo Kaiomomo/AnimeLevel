@@ -1,21 +1,56 @@
+import { useEffect, useState } from "react";
 import { Pressable, StyleSheet, Text, View } from "react-native";
 
-export default function RevisionScreen({ navigation }) {
+export default function RevisionScreen({ navigation, finishSession }) {
+  const [sessionSeconds, setSessionSeconds] = useState(0);
+  const [isRunning, setIsRunning] = useState(true);
+
+  useEffect(() => {
+    if (!isRunning) {
+      return;
+    }
+    const timer = setInterval(() => {
+      setSessionSeconds((previousSeconds) => previousSeconds + 1);
+    }, 1000);
+    return () => clearInterval(timer);
+  }, [isRunning]);
+
+  const displayMinutes = Math.floor(sessionSeconds / 60);
+  const displaySeconds = sessionSeconds % 60;
+
+  function handleFinishSession() {
+    finishSession(sessionSeconds);
+    navigation.navigate("Home");
+  }
+
   return (
     <View style={styles.container}>
       <Text style={styles.label}>REVISION SESSION</Text>
 
       <Text style={styles.focusText}>FOCUS</Text>
 
-      <Text style={styles.timer}>00:00</Text>
+      <Text style={styles.timer}>
+        {displayMinutes}:{displaySeconds.toString().padStart(2, "0")}
+      </Text>
 
       <Text style={styles.message}>
         Stay focused. Your progress is building.
       </Text>
 
-      <Pressable style={styles.backButton} onPress={() => navigation.goBack()}>
-        <Text style={styles.backButtonText}>BACK</Text>
-      </Pressable>
+      <View style={styles.buttonRow}>
+        <Pressable
+          style={styles.pauseButton}
+          onPress={() => setIsRunning(!isRunning)}
+        >
+          <Text style={styles.buttonText}>
+            {isRunning ? "PAUSE" : "RESUME"}
+          </Text>
+        </Pressable>
+
+        <Pressable style={styles.finishButton} onPress={handleFinishSession}>
+          <Text style={styles.buttonText}>FINISH</Text>
+        </Pressable>
+      </View>
     </View>
   );
 }
@@ -58,17 +93,32 @@ const styles = StyleSheet.create({
     marginTop: 14,
   },
 
-  backButton: {
+  buttonRow: {
     width: "100%",
+    flexDirection: "row",
+    gap: 12,
+    marginTop: 50,
+  },
+
+  pauseButton: {
+    flex: 1,
     height: 58,
     backgroundColor: "#181820",
     borderRadius: 16,
     alignItems: "center",
     justifyContent: "center",
-    marginTop: 50,
   },
 
-  backButtonText: {
+  finishButton: {
+    flex: 1,
+    height: 58,
+    backgroundColor: "#7C5CFF",
+    borderRadius: 16,
+    alignItems: "center",
+    justifyContent: "center",
+  },
+
+  buttonText: {
     color: "#FFFFFF",
     fontSize: 15,
     fontWeight: "800",

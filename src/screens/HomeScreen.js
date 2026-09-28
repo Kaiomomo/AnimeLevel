@@ -1,43 +1,12 @@
-import { useEffect, useState } from "react";
 import { Pressable, StyleSheet, Text, View } from "react-native";
 
-export default function HomeScreen({ navigation }) {
-  const [sessionSeconds, setSessionSeconds] = useState(0);
-  const [totalSeconds, setTotalSeconds] = useState(0);
-  const [isRevising, setIsRevising] = useState(false);
-
-  useEffect(() => {
-    if (!isRevising) {
-      return;
-    }
-
-    const timer = setInterval(() => {
-      setSessionSeconds((previousSeconds) => previousSeconds + 1);
-    }, 1000);
-
-    return () => clearInterval(timer);
-  }, [isRevising]);
-
-  const displayMinutes = Math.floor(sessionSeconds / 60);
-  const displaySeconds = sessionSeconds % 60;
-
-  const liveTotalSeconds = totalSeconds + sessionSeconds;
-  const secondsPerLevel = 60 * 60;
-  const level = Math.floor(liveTotalSeconds / secondsPerLevel);
-  const secondsIntoLevel = liveTotalSeconds % secondsPerLevel;
+export default function HomeScreen({ navigation, totalSeconds }) {
+  const secondsPerLevel = 60;
+  const level = Math.floor(totalSeconds / secondsPerLevel);
+  const secondsIntoLevel = totalSeconds % secondsPerLevel;
   const minutesIntoLevel = Math.floor(secondsIntoLevel / 60);
   const progressPercentage = (secondsIntoLevel / secondsPerLevel) * 100;
 
-  function handleRevisionPress() {
-    if (isRevising) {
-      setTotalSeconds((previousTotal) => previousTotal + sessionSeconds);
-      setSessionSeconds(0);
-      setIsRevising(false);
-    } else {
-      setIsRevising(true);
-    }
-  }
-  console.log("HOME NAVIGATION:", navigation);
   return (
     <View style={styles.container}>
       <View style={styles.header}>
@@ -74,17 +43,11 @@ export default function HomeScreen({ navigation }) {
         />
       </View>
 
-      <Text style={styles.timerText}>
-        {displayMinutes}:{displaySeconds.toString().padStart(2, "0")}
-      </Text>
-
       <Pressable
         style={styles.reviseButton}
         onPress={() => navigation.navigate("Revision")}
       >
-        <Text style={styles.reviseButtonText}>
-          {isRevising ? "FINISH SESSION" : "REVISE"}
-        </Text>
+        <Text style={styles.reviseButtonText}>REVISE</Text>
       </Pressable>
 
       <Text style={styles.reviseHint}>
@@ -222,13 +185,6 @@ const styles = StyleSheet.create({
     height: "100%",
     backgroundColor: "#7C5CFF",
     borderRadius: 6,
-  },
-
-  timerText: {
-    color: "#FFFFFF",
-    fontSize: 38,
-    fontWeight: "800",
-    marginTop: 30,
   },
 
   reviseButton: {
