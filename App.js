@@ -4,6 +4,7 @@ import { useState } from "react";
 
 import HomeScreen from "./src/screens/HomeScreen";
 import RevisionScreen from "./src/screens/RevisionScreen";
+import SessionCompleteScreen from "./src/screens/SessionCompleteScreen";
 
 const Stack = createNativeStackNavigator();
 
@@ -31,6 +32,11 @@ export default function App() {
             <RevisionScreen {...props} finishSession={finishSession} />
           )}
         </Stack.Screen>
+
+        <Stack.Screen
+          name="SessionComplete"
+          component={SessionCompleteScreen}
+        />
       </Stack.Navigator>
     </NavigationContainer>
   );

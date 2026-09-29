@@ -9,9 +9,11 @@ export default function RevisionScreen({ navigation, finishSession }) {
     if (!isRunning) {
       return;
     }
+
     const timer = setInterval(() => {
       setSessionSeconds((previousSeconds) => previousSeconds + 1);
     }, 1000);
+
     return () => clearInterval(timer);
   }, [isRunning]);
 
@@ -20,21 +22,26 @@ export default function RevisionScreen({ navigation, finishSession }) {
 
   function handleFinishSession() {
     finishSession(sessionSeconds);
-    navigation.navigate("Home");
+
+    navigation.navigate("SessionComplete", {
+      sessionSeconds: sessionSeconds,
+    });
   }
 
   return (
     <View style={styles.container}>
       <Text style={styles.label}>REVISION SESSION</Text>
 
-      <Text style={styles.focusText}>FOCUS</Text>
+      <Text style={styles.focusText}>{isRunning ? "FOCUS" : "PAUSED"}</Text>
 
       <Text style={styles.timer}>
         {displayMinutes}:{displaySeconds.toString().padStart(2, "0")}
       </Text>
 
       <Text style={styles.message}>
-        Stay focused. Your progress is building.
+        {isRunning
+          ? "Stay focused. Your progress is building."
+          : "Your revision session is paused."}
       </Text>
 
       <View style={styles.buttonRow}>
