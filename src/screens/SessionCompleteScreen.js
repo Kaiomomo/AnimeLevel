@@ -14,9 +14,10 @@ export default function SessionCompleteScreen({
   const remainingSessionSeconds = sessionSeconds % 60;
 
   // Level calculations
-  const secondsPerLevel = 60 * 60;
+  const secondsPerLevel = 10;
 
   const level = Math.floor(totalSeconds / secondsPerLevel);
+  const didLevelUp = level > previousLevel;
 
   const secondsIntoLevel = totalSeconds % secondsPerLevel;
 
@@ -32,10 +33,14 @@ export default function SessionCompleteScreen({
         <Text style={styles.check}>✓</Text>
       </View>
 
-      <Text style={styles.title}>NICE WORK!</Text>
+      <Text style={styles.title}>
+        {didLevelUp ? "LEVEL UP!" : "NICE WORK!"}
+      </Text>
 
       <Text style={styles.message}>
-        Your training is paying off. Keep pushing toward your next level.
+        {didLevelUp
+          ? `you reached Level ${level}! Your power has increased.`
+          : "Your training is paying off, Keep pushing toward your next level"}
       </Text>
 
       <View style={styles.sessionCard}>
