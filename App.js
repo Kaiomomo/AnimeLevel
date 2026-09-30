@@ -33,10 +33,11 @@ export default function App() {
           )}
         </Stack.Screen>
 
-        <Stack.Screen
-          name="SessionComplete"
-          component={SessionCompleteScreen}
-        />
+        <Stack.Screen name="SessionComplete">
+          {(props) => (
+            <SessionCompleteScreen {...props} totalSeconds={totalSeconds} />
+          )}
+        </Stack.Screen>
       </Stack.Navigator>
     </NavigationContainer>
   );
