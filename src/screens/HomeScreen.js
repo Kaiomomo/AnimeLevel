@@ -1,8 +1,42 @@
-import { Pressable, StyleSheet, Text, View } from "react-native";
+import { Image, Pressable, StyleSheet, Text, View } from "react-native";
 
 export default function HomeScreen({ navigation, totalSeconds }) {
-  const secondsPerLevel = 60;
+  const secondsPerLevel = 60 * 60;
   const level = Math.floor(totalSeconds / secondsPerLevel);
+
+  let characterStage = 1;
+  if (level >= 100) {
+    characterStage = 6;
+  } else if (level >= 75) {
+    characterStage = 5;
+  } else if (level >= 50) {
+    characterStage = 4;
+  } else if (level >= 25) {
+    characterStage = 3;
+  } else if (level >= 10) {
+    characterStage = 2;
+  }
+
+  let characterImage;
+  if (characterStage == 1) {
+    characterImage = require("../../assets/characters/stage1.png");
+  } else if (characterStage == 2) {
+    characterImage = require("../../assets/characters/stage2.png");
+  }
+
+  let characterForm = "Rookie";
+  if (characterStage == 6) {
+    characterForm = "Final Form";
+  } else if (characterStage == 5) {
+    characterForm = "Ascended";
+  } else if (characterStage == 4) {
+    characterForm = "Elite";
+  } else if (characterStage == 3) {
+    characterForm = "Warrior";
+  } else if (characterStage) {
+    characterForm = "Awakened";
+  }
+
   const secondsIntoLevel = totalSeconds % secondsPerLevel;
   const minutesIntoLevel = Math.floor(secondsIntoLevel / 60);
   const progressPercentage = (secondsIntoLevel / secondsPerLevel) * 100;
@@ -21,12 +55,10 @@ export default function HomeScreen({ navigation, totalSeconds }) {
       </View>
 
       <View style={styles.characterContainer}>
-        <View style={styles.characterGlow}>
-          <Text style={styles.characterPlaceholder}>?</Text>
-        </View>
+        <Image source={characterImage} style={styles.characterImage} />
 
         <View style={styles.rankBadge}>
-          <Text style={styles.rankText}>BEGINNER</Text>
+          <Text style={styles.rankText}>{characterForm.toUpperCase()}</Text>
         </View>
       </View>
 
@@ -112,14 +144,10 @@ const styles = StyleSheet.create({
     marginBottom: 28,
     overflow: "hidden",
   },
-
-  characterGlow: {
-    width: 100,
-    height: 160,
-    borderRadius: 80,
-    backgroundColor: "#242432",
-    alignItems: "center",
-    justifyContent: "center",
+  characterImage: {
+    width: "90%",
+    height: 230,
+    resizeMode: "contain",
   },
 
   characterPlaceholder: {
@@ -129,12 +157,11 @@ const styles = StyleSheet.create({
   },
 
   rankBadge: {
-    position: "absolute",
-    bottom: 20,
     backgroundColor: "#7C5CFF",
     paddingHorizontal: 18,
     paddingVertical: 7,
     borderRadius: 20,
+    marginTop: 8,
   },
 
   rankText: {
