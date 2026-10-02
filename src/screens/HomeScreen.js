@@ -1,41 +1,50 @@
 import { Image, Pressable, StyleSheet, Text, View } from "react-native";
+import { SECONDS_PER_LEVEL } from "../constants/progression";
+
+const characterStages = [
+  {
+    minLevel: 0,
+    form: "Rookie",
+    image: require("../../assets/characters/stage1.png"),
+  },
+  {
+    minLevel: 10,
+    form: "Awakened",
+    image: require("../../assets/characters/stage2.png"),
+  },
+  {
+    minLevel: 25,
+    form: "Warrior",
+    image: require("../../assets/characters/stage3.png"),
+  },
+  {
+    minLevel: 50,
+    form: "Elite",
+    image: require("../../assets/characters/stage4.png"),
+  },
+  {
+    minLevel: 75,
+    form: "Ascended",
+    image: require("../../assets/characters/stage5.png"),
+  },
+  {
+    minLevel: 100,
+    form: "Final Form",
+    image: require("../../assets/characters/stage6.png"),
+  },
+];
 
 export default function HomeScreen({ navigation, totalSeconds }) {
-  const secondsPerLevel = 60 * 60;
+  const secondsPerLevel = SECONDS_PER_LEVEL;
   const level = Math.floor(totalSeconds / secondsPerLevel);
 
-  let characterStage = 1;
-  if (level >= 100) {
-    characterStage = 6;
-  } else if (level >= 75) {
-    characterStage = 5;
-  } else if (level >= 50) {
-    characterStage = 4;
-  } else if (level >= 25) {
-    characterStage = 3;
-  } else if (level >= 10) {
-    characterStage = 2;
-  }
+  let currentCharacter = characterStages[0];
 
-  let characterImage;
-  if (characterStage == 1) {
-    characterImage = require("../../assets/characters/stage1.png");
-  } else if (characterStage == 2) {
-    characterImage = require("../../assets/characters/stage2.png");
-  }
-
-  let characterForm = "Rookie";
-  if (characterStage == 6) {
-    characterForm = "Final Form";
-  } else if (characterStage == 5) {
-    characterForm = "Ascended";
-  } else if (characterStage == 4) {
-    characterForm = "Elite";
-  } else if (characterStage == 3) {
-    characterForm = "Warrior";
-  } else if (characterStage) {
-    characterForm = "Awakened";
-  }
+  characterStages.forEach((stage) => {
+    if (level >= stage.minLevel) {
+      currentCharacter = stage;
+    }
+  });
 
   const secondsIntoLevel = totalSeconds % secondsPerLevel;
   const minutesIntoLevel = Math.floor(secondsIntoLevel / 60);
@@ -55,10 +64,12 @@ export default function HomeScreen({ navigation, totalSeconds }) {
       </View>
 
       <View style={styles.characterContainer}>
-        <Image source={characterImage} style={styles.characterImage} />
+        <Image source={currentCharacter.image} style={styles.characterImage} />
 
         <View style={styles.rankBadge}>
-          <Text style={styles.rankText}>{characterForm.toUpperCase()}</Text>
+          <Text style={styles.rankText}>
+            {currentCharacter.form.toUpperCase()}
+          </Text>
         </View>
       </View>
 

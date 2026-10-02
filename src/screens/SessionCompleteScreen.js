@@ -1,4 +1,5 @@
 import { Pressable, StyleSheet, Text, View } from "react-native";
+import { SECONDS_PER_LEVEL } from "../constants/progression";
 
 export default function SessionCompleteScreen({
   navigation,
@@ -8,13 +9,13 @@ export default function SessionCompleteScreen({
   // Time completed during this session
   const sessionSeconds = route.params?.sessionSeconds || 0;
   const previousTotalSeconds = totalSeconds - sessionSeconds;
-  const previousLevel = Math.floor(previousTotalSeconds / (60 * 60));
+  const previousLevel = Math.floor(previousTotalSeconds / secondsPerLevel);
 
   const sessionMinutes = Math.floor(sessionSeconds / 60);
   const remainingSessionSeconds = sessionSeconds % 60;
 
   // Level calculations
-  const secondsPerLevel = 10;
+  const secondsPerLevel = SECONDS_PER_LEVEL;
 
   const level = Math.floor(totalSeconds / secondsPerLevel);
   const didLevelUp = level > previousLevel;
