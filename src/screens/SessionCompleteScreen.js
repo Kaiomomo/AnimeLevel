@@ -1,6 +1,5 @@
 import { Pressable, StyleSheet, Text, View } from "react-native";
-import { SECONDS_PER_LEVEL } from "../constants/progression";
-
+import { MAX_LEVEL, SECONDS_PER_LEVEL } from "../constants/progression";
 export default function SessionCompleteScreen({
   navigation,
   route,
@@ -9,7 +8,10 @@ export default function SessionCompleteScreen({
   // Time completed during this session
   const sessionSeconds = route.params?.sessionSeconds || 0;
   const previousTotalSeconds = totalSeconds - sessionSeconds;
-  const previousLevel = Math.floor(previousTotalSeconds / secondsPerLevel);
+  const calculatedPreviousLevel = Math.floor(
+    previousTotalSeconds / secondsPerLevel,
+  );
+  const previousLevel = Math.min(calculatedPreviousLevel, MAX_LEVEL);
 
   const sessionMinutes = Math.floor(sessionSeconds / 60);
   const remainingSessionSeconds = sessionSeconds % 60;
@@ -17,15 +19,17 @@ export default function SessionCompleteScreen({
   // Level calculations
   const secondsPerLevel = SECONDS_PER_LEVEL;
 
-  const level = Math.floor(totalSeconds / secondsPerLevel);
+  const calculatedLevel = Math.floor(totalSeconds / secondsPerLevel);
+  const level = Math.min(calculatedLevel, MAX_LEVEL);
   const didLevelUp = level > previousLevel;
 
+  const isMaxLevel = level == MAX_LEVEL;
   const secondsIntoLevel = totalSeconds % secondsPerLevel;
 
   const minutesIntoLevel = Math.floor(secondsIntoLevel / 60);
-
-  const progressPercentage = (secondsIntoLevel / secondsPerLevel) * 100;
-
+  const progressPercentage = isMaxLevel
+    ? 100
+    : (secondsIntoLevel / secondsPerLevel) * 100;
   return (
     <View style={styles.container}>
       <Text style={styles.smallTitle}>SESSION COMPLETE</Text>
@@ -39,9 +43,11 @@ export default function SessionCompleteScreen({
       </Text>
 
       <Text style={styles.message}>
-        {didLevelUp
-          ? `you reached Level ${level}! Your power has increased.`
-          : "Your training is paying off, Keep pushing toward your next level"}
+        {isMaxLevel
+          ? "you reached the maximum level.Your Final Form is complete"
+          : didLevelUp
+            ? `You reached Level ${level}! Your power has increased.`
+            : "Your training is paying off, Keep pushing toward your next level"}
       </Text>
 
       <View style={styles.sessionCard}>

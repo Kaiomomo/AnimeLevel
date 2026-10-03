@@ -1,5 +1,5 @@
 import { Image, Pressable, StyleSheet, Text, View } from "react-native";
-import { SECONDS_PER_LEVEL } from "../constants/progression";
+import { MAX_LEVEL, SECONDS_PER_LEVEL } from "../constants/progression";
 
 const characterStages = [
   {
@@ -36,8 +36,12 @@ const characterStages = [
 
 export default function HomeScreen({ navigation, totalSeconds }) {
   const secondsPerLevel = SECONDS_PER_LEVEL;
-  const level = Math.floor(totalSeconds / secondsPerLevel);
 
+  // Work out the user's level and stop it at Level 100
+  const calculatedLevel = Math.floor(totalSeconds / secondsPerLevel);
+  const level = Math.min(calculatedLevel, MAX_LEVEL);
+
+  // Find which character form should be displayed
   let currentCharacter = characterStages[0];
 
   characterStages.forEach((stage) => {
@@ -46,12 +50,20 @@ export default function HomeScreen({ navigation, totalSeconds }) {
     }
   });
 
+  // Check if the user has reached the maximum level
+  const isMaxLevel = level === MAX_LEVEL;
+
+  // Calculate progress toward the next level
   const secondsIntoLevel = totalSeconds % secondsPerLevel;
   const minutesIntoLevel = Math.floor(secondsIntoLevel / 60);
-  const progressPercentage = (secondsIntoLevel / secondsPerLevel) * 100;
+
+  const progressPercentage = isMaxLevel
+    ? 100
+    : (secondsIntoLevel / secondsPerLevel) * 100;
 
   return (
     <View style={styles.container}>
+      {/* Header */}
       <View style={styles.header}>
         <View>
           <Text style={styles.title}>ANIME LEVEL</Text>
@@ -63,6 +75,7 @@ export default function HomeScreen({ navigation, totalSeconds }) {
         </Pressable>
       </View>
 
+      {/* Character */}
       <View style={styles.characterContainer}>
         <Image source={currentCharacter.image} style={styles.characterImage} />
 
@@ -73,19 +86,26 @@ export default function HomeScreen({ navigation, totalSeconds }) {
         </View>
       </View>
 
+      {/* Level */}
       <Text style={styles.level}>LEVEL {level}</Text>
 
+      {/* Progress information */}
       <View style={styles.progressHeader}>
         <Text style={styles.progressLabel}>PROGRESS</Text>
-        <Text style={styles.progressText}>{minutesIntoLevel} / 60 MINUTES</Text>
+
+        <Text style={styles.progressText}>
+          {isMaxLevel ? "MAX LEVEL" : `${minutesIntoLevel} / 60 MINUTES`}
+        </Text>
       </View>
 
+      {/* Progress bar */}
       <View style={styles.progressBar}>
         <View
           style={[styles.progressFill, { width: `${progressPercentage}%` }]}
         />
       </View>
 
+      {/* Revision button */}
       <Pressable
         style={styles.reviseButton}
         onPress={() => navigation.navigate("Revision")}
@@ -155,16 +175,11 @@ const styles = StyleSheet.create({
     marginBottom: 28,
     overflow: "hidden",
   },
+
   characterImage: {
     width: "90%",
     height: 230,
     resizeMode: "contain",
-  },
-
-  characterPlaceholder: {
-    color: "#7C5CFF",
-    fontSize: 42,
-    fontWeight: "800",
   },
 
   rankBadge: {
