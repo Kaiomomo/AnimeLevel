@@ -1,5 +1,35 @@
-import { Pressable, StyleSheet, Text, View } from "react-native";
+import { useEffect, useRef } from "react";
+import { Animated, Pressable, StyleSheet, Text, View } from "react-native";
 import { MAX_LEVEL, SECONDS_PER_LEVEL } from "../constants/progression";
+
+const evolutions = [
+  {
+    level: 10,
+    form: "Awakened",
+    image: require("../../assets/characters/stage2.png"),
+  },
+  {
+    level: 25,
+    form: "Warrior",
+    image: require("../../assets/characters/stage3.png"),
+  },
+  {
+    level: 50,
+    form: "Elite",
+    image: require("../../assets/characters/stage4.png"),
+  },
+  {
+    level: 75,
+    form: "Ascended",
+    image: require("../../assets/characters/stage5.png"),
+  },
+  {
+    level: 100,
+    form: "Final Form",
+    image: require("../../assets/characters/stage6.png"),
+  },
+];
+
 export default function SessionCompleteScreen({
   navigation,
   route,
@@ -23,6 +53,31 @@ export default function SessionCompleteScreen({
   const level = Math.min(calculatedLevel, MAX_LEVEL);
   const didLevelUp = level > previousLevel;
 
+  const evolution = evolutions.find((evolution) => {
+    return previousLevel < evolution.level && level >= evolution.level;
+  });
+
+  const evolutionScale = useRef(new Animated.Value(0.4)).current;
+  const evolutionOpacity = useRef(new Animated.Value(0)).current;
+  useEffect(() => {
+    if (didEvolve) {
+      Animated.parallel([
+        Animated.spring(evolutionScale, {
+          toValue: 1,
+          friction: 4,
+          tension: 70,
+          useNativeDriver: true,
+        }),
+        Animated.timing(evolutionOpacity, {
+          toValue: 1,
+          duration: 700,
+          useNativeDriver: true,
+        }),
+      ]).start();
+    }
+  }, [didEvolve]);
+  const didEvolve = evolution !== undefined;
+
   const isMaxLevel = level == MAX_LEVEL;
   const secondsIntoLevel = totalSeconds % secondsPerLevel;
 
@@ -31,7 +86,7 @@ export default function SessionCompleteScreen({
     ? 100
     : (secondsIntoLevel / secondsPerLevel) * 100;
   return (
-    <View style={styles.container}>
+    <View style={[styles.container, didEvolve && styles.evolutionContainer]}>
       <Text style={styles.smallTitle}>SESSION COMPLETE</Text>
 
       <View style={styles.checkCircle}>
@@ -39,16 +94,42 @@ export default function SessionCompleteScreen({
       </View>
 
       <Text style={styles.title}>
-        {didLevelUp ? "LEVEL UP!" : "NICE WORK!"}
+        {didEvolve
+          ? "CHARACTER EVOLVED!"
+          : didLevelUp
+            ? "LEVEL UP!"
+            : "NICE WORK!"}
       </Text>
 
       <Text style={styles.message}>
         {isMaxLevel
-          ? "you reached the maximum level.Your Final Form is complete"
+          ? `You reached level ${level}! Your Character evolved into ${evolution.form}!`
           : didLevelUp
             ? `You reached Level ${level}! Your power has increased.`
             : "Your training is paying off, Keep pushing toward your next level"}
       </Text>
+
+      {didEvolve && (
+        <View style={styles.evolutionCard}>
+          <Text styles={styles.evolutionLabel}>⚡ EVOLUTION UNLOCKED ⚡</Text>
+
+          <Animated.Image
+            source={evolution.image}
+            style={[
+              styles.evolutionImage,
+              {
+                opacity: evolutionOpacity,
+                transform: [{ scale: evolutionScale }],
+              },
+            ]}
+          />
+
+          <Text styles={styles.evolutionForm}>
+            {evolution.form.toUpperCase()}
+          </Text>
+          <Text styles={styles.evolutionLevel}>Level{evolution.level} </Text>
+        </View>
+      )}
 
       <View style={styles.sessionCard}>
         <Text style={styles.cardLabel}>TIME STUDIED</Text>
@@ -162,6 +243,12 @@ const styles = StyleSheet.create({
     fontWeight: "900",
     marginTop: 6,
   },
+  evolutionImage: {
+    width: 220,
+    height: 220,
+    resizeMode: "contain",
+    marginTop: 10,
+  },
 
   earnedText: {
     color: "#7C5CFF",
@@ -169,6 +256,43 @@ const styles = StyleSheet.create({
     fontWeight: "800",
     marginTop: 6,
     letterSpacing: 1,
+  },
+  evolutionCard: {
+    width: "100%",
+    backgroundColor: "#21183D",
+    borderWidth: 2,
+    borderColor: "#7C5CFF",
+    borderRadius: 24,
+    paddingVertical: 28,
+    paddingHorizontal: 20,
+    alignItems: "center",
+    marginTop: 24,
+  },
+
+  evolutionLabel: {
+    color: "#B9A7FF",
+    fontSize: 13,
+    fontWeight: "900",
+    letterSpacing: 2,
+  },
+
+  evolutionForm: {
+    color: "#FFFFFF",
+    fontSize: 32,
+    fontWeight: "900",
+    letterSpacing: 2,
+    marginTop: 12,
+  },
+
+  evolutionLevel: {
+    color: "#8E8E9A",
+    fontSize: 13,
+    fontWeight: "700",
+    letterSpacing: 1,
+    marginTop: 8,
+  },
+  evolutionContainer: {
+    backgroundColor: "#120D24",
   },
 
   levelSection: {
