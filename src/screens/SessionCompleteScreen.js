@@ -1,5 +1,13 @@
 import { useEffect, useRef } from "react";
-import { Animated, Pressable, StyleSheet, Text, View } from "react-native";
+import {
+  Animated,
+  Pressable,
+  ScrollView,
+  StyleSheet,
+  Text,
+  View,
+} from "react-native";
+
 import { MAX_LEVEL, SECONDS_PER_LEVEL } from "../constants/progression";
 
 const evolutions = [
@@ -35,30 +43,55 @@ export default function SessionCompleteScreen({
   route,
   totalSeconds,
 }) {
-  // Time completed during this session
+  // Session time
   const sessionSeconds = route.params?.sessionSeconds || 0;
-  const previousTotalSeconds = totalSeconds - sessionSeconds;
-  const calculatedPreviousLevel = Math.floor(
-    previousTotalSeconds / secondsPerLevel,
-  );
-  const previousLevel = Math.min(calculatedPreviousLevel, MAX_LEVEL);
 
   const sessionMinutes = Math.floor(sessionSeconds / 60);
   const remainingSessionSeconds = sessionSeconds % 60;
 
-  // Level calculations
+  // Level settings
   const secondsPerLevel = SECONDS_PER_LEVEL;
 
+  // Level BEFORE this revision session
+  const previousTotalSeconds = totalSeconds - sessionSeconds;
+
+  const calculatedPreviousLevel = Math.floor(
+    previousTotalSeconds / secondsPerLevel,
+  );
+
+  const previousLevel = Math.min(calculatedPreviousLevel, MAX_LEVEL);
+
+  // Current level
   const calculatedLevel = Math.floor(totalSeconds / secondsPerLevel);
+
   const level = Math.min(calculatedLevel, MAX_LEVEL);
+
   const didLevelUp = level > previousLevel;
 
+  // Check if an evolution milestone was crossed
   const evolution = evolutions.find((evolution) => {
     return previousLevel < evolution.level && level >= evolution.level;
   });
 
+  const didEvolve = evolution !== undefined;
+
+  // Maximum level
+  const isMaxLevel = level === MAX_LEVEL;
+
+  // Progress toward next level
+  const secondsIntoLevel = totalSeconds % secondsPerLevel;
+
+  const minutesIntoLevel = Math.floor(secondsIntoLevel / 60);
+
+  const progressPercentage = isMaxLevel
+    ? 100
+    : (secondsIntoLevel / secondsPerLevel) * 100;
+
+  // Evolution animation
   const evolutionScale = useRef(new Animated.Value(0.4)).current;
+
   const evolutionOpacity = useRef(new Animated.Value(0)).current;
+
   useEffect(() => {
     if (didEvolve) {
       Animated.parallel([
@@ -68,6 +101,7 @@ export default function SessionCompleteScreen({
           tension: 70,
           useNativeDriver: true,
         }),
+
         Animated.timing(evolutionOpacity, {
           toValue: 1,
           duration: 700,
@@ -75,24 +109,21 @@ export default function SessionCompleteScreen({
         }),
       ]).start();
     }
-  }, [didEvolve]);
-  const didEvolve = evolution !== undefined;
+  }, [didEvolve, evolutionOpacity, evolutionScale]);
 
-  const isMaxLevel = level == MAX_LEVEL;
-  const secondsIntoLevel = totalSeconds % secondsPerLevel;
-
-  const minutesIntoLevel = Math.floor(secondsIntoLevel / 60);
-  const progressPercentage = isMaxLevel
-    ? 100
-    : (secondsIntoLevel / secondsPerLevel) * 100;
   return (
-    <View style={[styles.container, didEvolve && styles.evolutionContainer]}>
+    <ScrollView
+      style={[styles.container, didEvolve && styles.evolutionContainer]}
+      contentContainerStyle={styles.contentContainer}
+      showsVerticalScrollIndicator={false}
+    >
       <Text style={styles.smallTitle}>SESSION COMPLETE</Text>
 
       <View style={styles.checkCircle}>
         <Text style={styles.check}>✓</Text>
       </View>
 
+      {/* Main result */}
       <Text style={styles.title}>
         {didEvolve
           ? "CHARACTER EVOLVED!"
@@ -102,16 +133,19 @@ export default function SessionCompleteScreen({
       </Text>
 
       <Text style={styles.message}>
-        {isMaxLevel
-          ? `You reached level ${level}! Your Character evolved into ${evolution.form}!`
-          : didLevelUp
-            ? `You reached Level ${level}! Your power has increased.`
-            : "Your training is paying off, Keep pushing toward your next level"}
+        {didEvolve
+          ? `You reached Level ${level}! Your character evolved into ${evolution.form}!`
+          : isMaxLevel
+            ? "You have reached the maximum level. Your final form is complete!"
+            : didLevelUp
+              ? `You reached Level ${level}! Your power has increased.`
+              : "Your training is paying off. Keep pushing toward your next level."}
       </Text>
 
+      {/* Evolution reward */}
       {didEvolve && (
         <View style={styles.evolutionCard}>
-          <Text styles={styles.evolutionLabel}>⚡ EVOLUTION UNLOCKED ⚡</Text>
+          <Text style={styles.evolutionLabel}>⚡ EVOLUTION UNLOCKED ⚡</Text>
 
           <Animated.Image
             source={evolution.image}
@@ -119,18 +153,24 @@ export default function SessionCompleteScreen({
               styles.evolutionImage,
               {
                 opacity: evolutionOpacity,
-                transform: [{ scale: evolutionScale }],
+                transform: [
+                  {
+                    scale: evolutionScale,
+                  },
+                ],
               },
             ]}
           />
 
-          <Text styles={styles.evolutionForm}>
+          <Text style={styles.evolutionForm}>
             {evolution.form.toUpperCase()}
           </Text>
-          <Text styles={styles.evolutionLevel}>Level{evolution.level} </Text>
+
+          <Text style={styles.evolutionLevel}>LEVEL {evolution.level}</Text>
         </View>
       )}
 
+      {/* Session time */}
       <View style={styles.sessionCard}>
         <Text style={styles.cardLabel}>TIME STUDIED</Text>
 
@@ -141,11 +181,14 @@ export default function SessionCompleteScreen({
         <Text style={styles.earnedText}>+{sessionMinutes} MINUTES</Text>
       </View>
 
+      {/* Level progress */}
       <View style={styles.levelSection}>
         <View style={styles.levelHeader}>
           <Text style={styles.levelText}>LEVEL {level}</Text>
 
-          <Text style={styles.progressText}>{minutesIntoLevel} / 60 MIN</Text>
+          <Text style={styles.progressText}>
+            {isMaxLevel ? "MAX LEVEL" : `${minutesIntoLevel} / 60 MIN`}
+          </Text>
         </View>
 
         <View style={styles.progressBar}>
@@ -160,7 +203,9 @@ export default function SessionCompleteScreen({
         </View>
 
         <Text style={styles.nextLevelText}>
-          KEEP GOING — LEVEL {level + 1} AWAITS
+          {isMaxLevel
+            ? "FINAL FORM ACHIEVED"
+            : `KEEP GOING — LEVEL ${level + 1} AWAITS`}
         </Text>
       </View>
 
@@ -170,7 +215,7 @@ export default function SessionCompleteScreen({
       >
         <Text style={styles.continueButtonText}>CONTINUE</Text>
       </Pressable>
-    </View>
+    </ScrollView>
   );
 }
 
@@ -178,9 +223,19 @@ const styles = StyleSheet.create({
   container: {
     flex: 1,
     backgroundColor: "#0D0D12",
+  },
+
+  contentContainer: {
+    flexGrow: 1,
     alignItems: "center",
     justifyContent: "center",
     paddingHorizontal: 24,
+    paddingTop: 50,
+    paddingBottom: 40,
+  },
+
+  evolutionContainer: {
+    backgroundColor: "#120D24",
   },
 
   smallTitle: {
@@ -211,6 +266,7 @@ const styles = StyleSheet.create({
     fontSize: 32,
     fontWeight: "900",
     marginTop: 20,
+    textAlign: "center",
   },
 
   message: {
@@ -221,13 +277,55 @@ const styles = StyleSheet.create({
     marginTop: 10,
   },
 
+  evolutionCard: {
+    width: "100%",
+    backgroundColor: "#21183D",
+    borderWidth: 2,
+    borderColor: "#7C5CFF",
+    borderRadius: 24,
+    paddingVertical: 20,
+    paddingHorizontal: 20,
+    alignItems: "center",
+    marginTop: 20,
+  },
+
+  evolutionLabel: {
+    color: "#B9A7FF",
+    fontSize: 13,
+    fontWeight: "900",
+    letterSpacing: 2,
+  },
+
+  evolutionImage: {
+    width: 180,
+    height: 180,
+    resizeMode: "contain",
+    marginTop: 8,
+  },
+
+  evolutionForm: {
+    color: "#FFFFFF",
+    fontSize: 28,
+    fontWeight: "900",
+    letterSpacing: 2,
+    marginTop: 6,
+  },
+
+  evolutionLevel: {
+    color: "#8E8E9A",
+    fontSize: 13,
+    fontWeight: "700",
+    letterSpacing: 1,
+    marginTop: 6,
+  },
+
   sessionCard: {
     width: "100%",
     backgroundColor: "#181820",
     borderRadius: 22,
     alignItems: "center",
-    paddingVertical: 24,
-    marginTop: 30,
+    paddingVertical: 20,
+    marginTop: 20,
   },
 
   cardLabel: {
@@ -239,15 +337,9 @@ const styles = StyleSheet.create({
 
   sessionTime: {
     color: "#FFFFFF",
-    fontSize: 42,
+    fontSize: 38,
     fontWeight: "900",
     marginTop: 6,
-  },
-  evolutionImage: {
-    width: 220,
-    height: 220,
-    resizeMode: "contain",
-    marginTop: 10,
   },
 
   earnedText: {
@@ -257,47 +349,10 @@ const styles = StyleSheet.create({
     marginTop: 6,
     letterSpacing: 1,
   },
-  evolutionCard: {
-    width: "100%",
-    backgroundColor: "#21183D",
-    borderWidth: 2,
-    borderColor: "#7C5CFF",
-    borderRadius: 24,
-    paddingVertical: 28,
-    paddingHorizontal: 20,
-    alignItems: "center",
-    marginTop: 24,
-  },
-
-  evolutionLabel: {
-    color: "#B9A7FF",
-    fontSize: 13,
-    fontWeight: "900",
-    letterSpacing: 2,
-  },
-
-  evolutionForm: {
-    color: "#FFFFFF",
-    fontSize: 32,
-    fontWeight: "900",
-    letterSpacing: 2,
-    marginTop: 12,
-  },
-
-  evolutionLevel: {
-    color: "#8E8E9A",
-    fontSize: 13,
-    fontWeight: "700",
-    letterSpacing: 1,
-    marginTop: 8,
-  },
-  evolutionContainer: {
-    backgroundColor: "#120D24",
-  },
 
   levelSection: {
     width: "100%",
-    marginTop: 30,
+    marginTop: 22,
   },
 
   levelHeader: {
@@ -349,7 +404,7 @@ const styles = StyleSheet.create({
     borderRadius: 16,
     alignItems: "center",
     justifyContent: "center",
-    marginTop: 30,
+    marginTop: 24,
   },
 
   continueButtonText: {
