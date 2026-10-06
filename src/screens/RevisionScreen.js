@@ -1,10 +1,25 @@
+import { usePreventRemove } from "@react-navigation/native";
 import { useEffect, useState } from "react";
-import { Pressable, StyleSheet, Text, View } from "react-native";
+import { Alert, Pressable, StyleSheet, Text, View } from "react-native";
 
 export default function RevisionScreen({ navigation, finishSession }) {
   const [sessionSeconds, setSessionSeconds] = useState(0);
   const [isRunning, setIsRunning] = useState(true);
+  const [isFinishing, setIsFinishing] = useState(false);
 
+  usePreventRemove(sessionSeconds > 0 && !isFinishing, ({ data }) => {
+    Alert.alert("Leave Revision?", "Your current session will be lost.", [
+      {
+        text: "Keep Revising",
+        style: "cancel",
+      },
+      {
+        text: "Leave",
+        style: "destructive",
+        onPress: () => navigation.dispatch(data.action),
+      },
+    ]);
+  });
   useEffect(() => {
     if (!isRunning) {
       return;
@@ -21,6 +36,7 @@ export default function RevisionScreen({ navigation, finishSession }) {
   const displaySeconds = sessionSeconds % 60;
 
   function handleFinishSession() {
+    setIsFinishing(true);
     finishSession(sessionSeconds);
 
     navigation.navigate("SessionComplete", {
