@@ -1,92 +1,105 @@
-import { Image, Pressable, StyleSheet, Text, View } from "react-native";
-import { characterStages } from "../constants/characters";
-import { MAX_LEVEL, SECONDS_PER_LEVEL } from "../constants/progression";
+import { usePreventRemove } from "@react-navigation/native";
+import { useEffect, useState } from "react";
+import { Alert, Pressable, StyleSheet, Text, View } from "react-native";
 
-export default function HomeScreen({ navigation, totalSeconds }) {
-  const secondsPerLevel = SECONDS_PER_LEVEL;
+export default function RevisionScreen({ navigation, finishSession }) {
+  const [sessionSeconds, setSessionSeconds] = useState(0);
+  const [isRunning, setIsRunning] = useState(true);
+  const [isFinishing, setIsFinishing] = useState(false);
 
-  // Work out the user's level and stop it at Level 100
-  const calculatedLevel = Math.floor(totalSeconds / secondsPerLevel);
-  const level = Math.min(calculatedLevel, MAX_LEVEL);
+  // The real-world time when the current running period started
+  const [startTime, setStartTime] = useState(Date.now());
 
-  // Find which character form should be displayed
-  let currentCharacter = characterStages[0];
+  // Time already studied before the most recent resume
+  const [accumulatedSeconds, setAccumulatedSeconds] = useState(0);
 
-  characterStages.forEach((stage) => {
-    if (level >= stage.minLevel) {
-      currentCharacter = stage;
-    }
+  // Protect the user from accidentally losing their session
+  usePreventRemove(sessionSeconds > 0 && !isFinishing, ({ data }) => {
+    Alert.alert("Leave Revision?", "Your current session will be lost.", [
+      {
+        text: "Keep Revising",
+        style: "cancel",
+      },
+      {
+        text: "Leave",
+        style: "destructive",
+        onPress: () => navigation.dispatch(data.action),
+      },
+    ]);
   });
 
-  // Check if the user has reached the maximum level
-  const isMaxLevel = level === MAX_LEVEL;
+  // Calculate session time using the real clock
+  useEffect(() => {
+    if (!isRunning) return;
 
-  // Calculate progress toward the next level
-  const secondsIntoLevel = totalSeconds % secondsPerLevel;
-  const minutesIntoLevel = Math.floor(secondsIntoLevel / 60);
+    function updateTimer() {
+      const elapsedMilliseconds = Date.now() - startTime;
+      const elapsedSeconds = Math.floor(elapsedMilliseconds / 1000);
 
-  const progressPercentage = isMaxLevel
-    ? 100
-    : (secondsIntoLevel / secondsPerLevel) * 100;
+      setSessionSeconds(accumulatedSeconds + elapsedSeconds);
+    }
+
+    // Update immediately
+    updateTimer();
+
+    // Then refresh the display every second
+    const timer = setInterval(updateTimer, 1000);
+
+    return () => clearInterval(timer);
+  }, [isRunning, startTime, accumulatedSeconds]);
+
+  function handlePauseResume() {
+    if (isRunning) {
+      // Save how much time has been studied so far
+      setAccumulatedSeconds(sessionSeconds);
+      setIsRunning(false);
+    } else {
+      // Start measuring a new running period from right now
+      setStartTime(Date.now());
+      setIsRunning(true);
+    }
+  }
+
+  function handleFinishSession() {
+    setIsFinishing(true);
+
+    finishSession(sessionSeconds);
+
+    navigation.navigate("SessionComplete", {
+      sessionSeconds: sessionSeconds,
+    });
+  }
+
+  const displayMinutes = Math.floor(sessionSeconds / 60);
+  const displaySeconds = sessionSeconds % 60;
 
   return (
     <View style={styles.container}>
-      {/* Header */}
-      <View style={styles.header}>
-        <View>
-          <Text style={styles.title}>ANIME LEVEL</Text>
-          <Text style={styles.subtitle}>Your Journey Starts Here</Text>
-        </View>
+      <Text style={styles.label}>REVISION SESSION</Text>
 
-        <Pressable
-          style={styles.profileButton}
-          onPress={() => navigation.navigate("Stats")}
-        >
-          <Text style={styles.profileText}>{level}</Text>
+      <Text style={styles.focusText}>{isRunning ? "FOCUS" : "PAUSED"}</Text>
+
+      <Text style={styles.timer}>
+        {displayMinutes}:{displaySeconds.toString().padStart(2, "0")}
+      </Text>
+
+      <Text style={styles.message}>
+        {isRunning
+          ? "Stay focused. Your progress is building."
+          : "Your session is paused."}
+      </Text>
+
+      <View style={styles.buttonRow}>
+        <Pressable style={styles.pauseButton} onPress={handlePauseResume}>
+          <Text style={styles.buttonText}>
+            {isRunning ? "PAUSE" : "RESUME"}
+          </Text>
+        </Pressable>
+
+        <Pressable style={styles.finishButton} onPress={handleFinishSession}>
+          <Text style={styles.buttonText}>FINISH</Text>
         </Pressable>
       </View>
-
-      {/* Character */}
-      <View style={styles.characterContainer}>
-        <Image source={currentCharacter.image} style={styles.characterImage} />
-
-        <View style={styles.rankBadge}>
-          <Text style={styles.rankText}>
-            {currentCharacter.form.toUpperCase()}
-          </Text>
-        </View>
-      </View>
-
-      {/* Level */}
-      <Text style={styles.level}>LEVEL {level}</Text>
-
-      {/* Progress information */}
-      <View style={styles.progressHeader}>
-        <Text style={styles.progressLabel}>PROGRESS</Text>
-
-        <Text style={styles.progressText}>
-          {isMaxLevel ? "MAX LEVEL" : `${minutesIntoLevel} / 60 MINUTES`}
-        </Text>
-      </View>
-
-      {/* Progress bar */}
-      <View style={styles.progressBar}>
-        <View
-          style={[styles.progressFill, { width: `${progressPercentage}%` }]}
-        />
-      </View>
-
-      {/* Revision button */}
-      <Pressable
-        style={styles.reviseButton}
-        onPress={() => navigation.navigate("Revision")}
-      >
-        <Text style={styles.reviseButtonText}>REVISE</Text>
-      </Pressable>
-
-      <Text style={styles.reviseHint}>
-        Start a study session and earn progress
-      </Text>
     </View>
   );
 }
@@ -96,141 +109,66 @@ const styles = StyleSheet.create({
     flex: 1,
     backgroundColor: "#0D0D12",
     alignItems: "center",
+    justifyContent: "center",
     paddingHorizontal: 24,
-    paddingTop: 70,
   },
 
-  header: {
-    width: "100%",
-    flexDirection: "row",
-    justifyContent: "space-between",
-    alignItems: "center",
-  },
-
-  title: {
-    color: "#FFFFFF",
-    fontSize: 24,
-    fontWeight: "800",
-    letterSpacing: 1,
-  },
-
-  subtitle: {
+  label: {
     color: "#8E8E9A",
-    fontSize: 13,
-    marginTop: 4,
-  },
-
-  profileButton: {
-    width: 46,
-    height: 46,
-    borderRadius: 23,
-    backgroundColor: "#7C5CFF",
-    alignItems: "center",
-    justifyContent: "center",
-  },
-
-  profileText: {
-    color: "#FFFFFF",
-    fontSize: 16,
+    fontSize: 12,
     fontWeight: "800",
+    letterSpacing: 2,
   },
 
-  characterContainer: {
-    width: "100%",
-    height: 300,
-    borderRadius: 28,
-    backgroundColor: "#181820",
-    alignItems: "center",
-    justifyContent: "center",
-    marginTop: 45,
-    marginBottom: 28,
-    overflow: "hidden",
-  },
-
-  characterImage: {
-    width: "90%",
-    height: 230,
-    resizeMode: "contain",
-  },
-
-  rankBadge: {
-    backgroundColor: "#7C5CFF",
-    paddingHorizontal: 18,
-    paddingVertical: 7,
-    borderRadius: 20,
-    marginTop: 8,
-  },
-
-  rankText: {
-    color: "#FFFFFF",
-    fontSize: 11,
-    fontWeight: "800",
-    letterSpacing: 1.5,
-  },
-
-  level: {
-    color: "#FFFFFF",
-    fontSize: 30,
+  focusText: {
+    color: "#7C5CFF",
+    fontSize: 18,
     fontWeight: "900",
-    letterSpacing: 1,
+    letterSpacing: 3,
+    marginTop: 18,
   },
 
-  progressHeader: {
-    width: "100%",
-    flexDirection: "row",
-    justifyContent: "space-between",
-    alignItems: "center",
-    marginTop: 22,
-    marginBottom: 10,
-  },
-
-  progressLabel: {
+  timer: {
     color: "#FFFFFF",
-    fontSize: 12,
-    fontWeight: "800",
-    letterSpacing: 1,
+    fontSize: 72,
+    fontWeight: "900",
+    marginTop: 10,
   },
 
-  progressText: {
+  message: {
     color: "#8E8E9A",
-    fontSize: 12,
-    fontWeight: "600",
+    fontSize: 14,
+    textAlign: "center",
+    marginTop: 12,
   },
 
-  progressBar: {
+  buttonRow: {
+    flexDirection: "row",
     width: "100%",
-    height: 10,
+    gap: 12,
+    marginTop: 40,
+  },
+
+  pauseButton: {
+    flex: 1,
     backgroundColor: "#24242E",
-    borderRadius: 6,
-    overflow: "hidden",
-  },
-
-  progressFill: {
-    height: "100%",
-    backgroundColor: "#7C5CFF",
-    borderRadius: 6,
-  },
-
-  reviseButton: {
-    width: "100%",
-    height: 58,
-    backgroundColor: "#7C5CFF",
+    paddingVertical: 18,
     borderRadius: 16,
     alignItems: "center",
-    justifyContent: "center",
-    marginTop: 32,
   },
 
-  reviseButtonText: {
+  finishButton: {
+    flex: 1,
+    backgroundColor: "#7C5CFF",
+    paddingVertical: 18,
+    borderRadius: 16,
+    alignItems: "center",
+  },
+
+  buttonText: {
     color: "#FFFFFF",
-    fontSize: 16,
+    fontSize: 14,
     fontWeight: "900",
-    letterSpacing: 1.5,
-  },
-
-  reviseHint: {
-    color: "#666672",
-    fontSize: 12,
-    marginTop: 12,
+    letterSpacing: 1,
   },
 });

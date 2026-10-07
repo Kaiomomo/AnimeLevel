@@ -63,7 +63,6 @@ export default function App() {
             <RevisionScreen {...props} finishSession={finishSession} />
           )}
         </Stack.Screen>
-
         <Stack.Screen name="SessionComplete">
           {(props) => (
             <SessionCompleteScreen {...props} totalSeconds={totalSeconds} />

@@ -6,6 +6,7 @@ export default function RevisionScreen({ navigation, finishSession }) {
   const [sessionSeconds, setSessionSeconds] = useState(0);
   const [isRunning, setIsRunning] = useState(true);
   const [isFinishing, setIsFinishing] = useState(false);
+  const [startTime, setStartTime] = useState(Date.now());
 
   usePreventRemove(sessionSeconds > 0 && !isFinishing, ({ data }) => {
     Alert.alert("Leave Revision?", "Your current session will be lost.", [
