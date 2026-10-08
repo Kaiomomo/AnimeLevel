@@ -1,9 +1,34 @@
 import { usePreventRemove } from "@react-navigation/native";
 import { useEffect, useRef, useState } from "react";
 import { Alert, Pressable, StyleSheet, Text, View } from "react-native";
+import RevisionActivity from "../widgets/RevisionActivity";
 
 export default function RevisionScreen({ navigation, finishSession }) {
   const [sessionSeconds, setSessionSeconds] = useState(0);
+
+  const liveActivityRef = useRef(null);
+  function startLiveActivity() {
+    if (liveActivityRef.current) {
+      return;
+    }
+    liveActivityRef.current = RevisionActivity.start({
+      status: "FOCUS",
+      minutes: 0,
+    });
+  }
+  useEffect(() => {
+    startLiveActivity();
+  }, []);
+
+  useEffect(() => {
+    if (!isRunning || !liveActivityRef.current) return;
+
+    liveActivityRef.current.update({
+      status: "FOCUS",
+      minutes: Math.floor(sessionSeconds / 60),
+    });
+  }, [sessionSeconds, isRunning]);
+
   const [isRunning, setIsRunning] = useState(true);
   const [isFinishing, setIsFinishing] = useState(false);
 
@@ -57,6 +82,13 @@ export default function RevisionScreen({ navigation, finishSession }) {
       setSessionSeconds(Math.floor(accumulatedMsRef.current / 1000));
 
       setIsRunning(false);
+
+      if (liveActivityRef.current) {
+        liveActivityRef.current.update({
+          status: "PAUSED",
+          minutes: Math.floor(sessionSeconds / 60),
+        });
+      }
     } else {
       // Begin a new running period
       startTimeRef.current = Date.now();
@@ -64,7 +96,7 @@ export default function RevisionScreen({ navigation, finishSession }) {
     }
   }
 
-  function handleFinishSession() {
+  async function handleFinishSession() {
     // Calculate time at the exact moment FINISH is pressed
     const finalSeconds = Math.floor(getElapsedMilliseconds() / 1000);
 
@@ -73,7 +105,10 @@ export default function RevisionScreen({ navigation, finishSession }) {
 
     // Save the revision time to the user's total
     finishSession(finalSeconds);
-
+    if (liveActivityRef.current) {
+      await liveActivityRef.current.end("immediate");
+      liveActivityRef.current = null;
+    }
     // Open the completion screen
     navigation.navigate("SessionComplete", {
       sessionSeconds: finalSeconds,

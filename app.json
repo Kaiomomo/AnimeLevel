@@ -8,7 +8,11 @@
     "scheme": "animelevel",
     "userInterfaceStyle": "automatic",
     "ios": {
-      "icon": "./assets/expo.icon"
+      "icon": "./assets/expo.icon",
+      "bundleIdentifier": "com.kaiomomo.AnimeLevel",
+      "infoPlist": {
+        "NSSupportsLiveActivities": true
+      }
     },
     "android": {
       "adaptiveIcon": {
@@ -30,6 +34,20 @@
           "backgroundColor": "#208AEF",
           "image": "./assets/images/splash-icon.png",
           "imageWidth": 76
+        }
+      ],
+      [
+        "expo-widgets",
+        {
+          "widgets": [
+            {
+              "name": "RevisionActivity",
+              "displayName": "AnimeLevel Revision",
+              "description": "Track your revision session on your Lock Screen",
+              "supportedFamilies": ["systemSmall"],
+              "contentMarginsDisabled": false
+            }
+          ]
         }
       ]
     ],
