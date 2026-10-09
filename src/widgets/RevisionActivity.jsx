@@ -16,19 +16,53 @@ function RevisionActivity(props) {
         >
           ANIME LEVEL
         </Text>
+
         <Text modifiers={[font({ size: 26, weight: "bold" })]}>
           {props.status}
         </Text>
-        <Text>Revision time: {props.minutes} min</Text>
+
+        {props.status === "PAUSED" ? (
+          <Text
+            modifiers={[
+              font({ size: 26, weight: "bold" }),
+              foregroundStyle("#A78BFA"),
+            ]}
+          >
+            {props.pausedDisplay}
+          </Text>
+        ) : (
+          <Text
+            date={new Date(props.startTimestamp)}
+            dateStyle="timer"
+            modifiers={[
+              font({ size: 26, weight: "bold" }),
+              foregroundStyle("#A78BFA"),
+            ]}
+          />
+        )}
       </VStack>
     ),
 
     compactLeading: <Image systemName="bolt.fill" color="#A78BFA" />,
-    compactTrailing: <Text>{props.minutes}m</Text>,
+
+    compactTrailing: (
+      <Text>
+        {props.status === "PAUSED" ? props.pausedDisplay : `${props.minutes}m`}
+      </Text>
+    ),
+
     minimal: <Image systemName="bolt.fill" color="#A78BFA" />,
 
     expandedLeading: <Text>ANIME LEVEL</Text>,
-    expandedTrailing: <Text>{props.minutes} min</Text>,
+
+    expandedTrailing: (
+      <Text>
+        {props.status === "PAUSED"
+          ? props.pausedDisplay
+          : `${props.minutes} min`}
+      </Text>
+    ),
+
     expandedBottom: <Text>{props.status}</Text>,
   };
 }
