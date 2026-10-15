@@ -2,10 +2,13 @@ import { usePreventRemove } from "@react-navigation/native";
 import { useEffect, useRef, useState } from "react";
 import { Alert, Pressable, StyleSheet, Text, View } from "react-native";
 
+import { MAX_LEVEL, SECONDS_PER_LEVEL } from "../constants/progression";
+
 import RevisionActivity from "../widgets/RevisionActivity";
 
 const MAX_REVISION_MS = 100 * 60 * 60 * 1000;
 
+// Convert revision seconds into a readable timer.
 function formatRevisionTime(totalSeconds) {
   const hours = Math.floor(totalSeconds / 3600);
   const minutes = Math.floor((totalSeconds % 3600) / 60);
@@ -20,16 +23,41 @@ function formatRevisionTime(totalSeconds) {
   return `${minutes}:${String(seconds).padStart(2, "0")}`;
 }
 
-export default function RevisionScreen({ navigation, finishSession }) {
+// One reusable function for level and XP calculations.
+function calculateProgress(totalSeconds) {
+  const safeSeconds = Math.max(0, totalSeconds);
+
+  const level = Math.min(
+    Math.floor(safeSeconds / SECONDS_PER_LEVEL),
+    MAX_LEVEL,
+  );
+
+  const progress =
+    level >= MAX_LEVEL
+      ? 100
+      : ((safeSeconds % SECONDS_PER_LEVEL) / SECONDS_PER_LEVEL) * 100;
+
+  return { level, progress };
+}
+
+export default function RevisionScreen({
+  navigation,
+  finishSession,
+  totalSeconds = 0,
+}) {
   const [sessionSeconds, setSessionSeconds] = useState(0);
   const [isRunning, setIsRunning] = useState(true);
   const [isFinishing, setIsFinishing] = useState(false);
 
-  // Keep accurate time even if the screen stops updating.
+  // Saved revision time + current session time.
+  const combinedSeconds = totalSeconds + sessionSeconds;
+  const { level, progress } = calculateProgress(combinedSeconds);
+
+  // Timer references keep time accurate in the background.
   const startTimeRef = useRef(Date.now());
   const accumulatedMsRef = useRef(0);
 
-  // References for the iOS Live Activity.
+  // Live Activity references.
   const liveActivityRef = useRef(null);
   const liveTimeRef = useRef(null);
 
@@ -44,7 +72,6 @@ export default function RevisionScreen({ navigation, finishSession }) {
   function startLiveActivity() {
     if (liveActivityRef.current) return;
 
-    // Align the Lock Screen timer with the app timer.
     const startTimestamp = startTimeRef.current - accumulatedMsRef.current;
 
     const endTimestamp = startTimestamp + MAX_REVISION_MS;
@@ -54,22 +81,26 @@ export default function RevisionScreen({ navigation, finishSession }) {
       endTimestamp,
     };
 
+    const initialProgress = calculateProgress(totalSeconds);
+
     liveActivityRef.current = RevisionActivity.start({
       status: "FOCUS",
       minutes: 0,
       startTimestamp,
       endTimestamp,
+      level: initialProgress.level,
+      progress: initialProgress.progress,
       pauseTimestamp: null,
       pausedDisplay: "0:00",
     });
   }
 
-  // Start the Live Activity when the Revision screen opens.
+  // Start the Lock Screen Live Activity.
   useEffect(() => {
     startLiveActivity();
   }, []);
 
-  // Update the Live Activity when the completed minute changes.
+  // Update XP when the completed minute changes.
   const sessionMinutes = Math.floor(sessionSeconds / 60);
 
   useEffect(() => {
@@ -80,13 +111,15 @@ export default function RevisionScreen({ navigation, finishSession }) {
     liveActivityRef.current.update({
       status: "FOCUS",
       minutes: sessionMinutes,
+      level,
+      progress,
       ...liveTimeRef.current,
       pauseTimestamp: null,
       pausedDisplay: formatRevisionTime(sessionSeconds),
     });
-  }, [sessionMinutes, isRunning]);
+  }, [sessionMinutes, isRunning, level, totalSeconds]);
 
-  // Warn before accidentally leaving an active revision session.
+  // Protect unfinished sessions from accidental navigation.
   usePreventRemove(sessionSeconds > 0 && !isFinishing, ({ data }) => {
     Alert.alert("Leave Revision?", "Your current session will be lost.", [
       {
@@ -118,7 +151,7 @@ export default function RevisionScreen({ navigation, finishSession }) {
 
   function handlePauseResume() {
     if (isRunning) {
-      // PAUSE: save the exact amount of revision completed.
+      // PAUSE: record the exact elapsed time.
       accumulatedMsRef.current = getElapsedMilliseconds();
 
       const pausedSeconds = Math.floor(accumulatedMsRef.current / 1000);
@@ -126,26 +159,29 @@ export default function RevisionScreen({ navigation, finishSession }) {
       setSessionSeconds(pausedSeconds);
       setIsRunning(false);
 
+      const pausedProgress = calculateProgress(totalSeconds + pausedSeconds);
+
       if (liveActivityRef.current && liveTimeRef.current) {
         liveActivityRef.current.update({
           status: "PAUSED",
           minutes: Math.floor(pausedSeconds / 60),
+          level: pausedProgress.level,
+          progress: pausedProgress.progress,
           ...liveTimeRef.current,
           pauseTimestamp: Date.now(),
           pausedDisplay: formatRevisionTime(pausedSeconds),
         });
       }
     } else {
-      // RESUME: restart from the previously accumulated time.
+      // RESUME: continue without counting paused time.
       const resumeTimestamp = Date.now();
 
       startTimeRef.current = resumeTimestamp;
       setIsRunning(true);
 
       const elapsedMilliseconds = accumulatedMsRef.current;
+      const elapsedSeconds = Math.floor(elapsedMilliseconds / 1000);
 
-      // Move the native timer's starting point forward
-      // to exclude time spent paused.
       const startTimestamp = resumeTimestamp - elapsedMilliseconds;
 
       const endTimestamp = startTimestamp + MAX_REVISION_MS;
@@ -155,15 +191,17 @@ export default function RevisionScreen({ navigation, finishSession }) {
         endTimestamp,
       };
 
+      const resumedProgress = calculateProgress(totalSeconds + elapsedSeconds);
+
       if (liveActivityRef.current) {
         liveActivityRef.current.update({
           status: "FOCUS",
-          minutes: Math.floor(elapsedMilliseconds / 60000),
+          minutes: Math.floor(elapsedSeconds / 60),
+          level: resumedProgress.level,
+          progress: resumedProgress.progress,
           ...liveTimeRef.current,
           pauseTimestamp: null,
-          pausedDisplay: formatRevisionTime(
-            Math.floor(elapsedMilliseconds / 1000),
-          ),
+          pausedDisplay: formatRevisionTime(elapsedSeconds),
         });
       }
     }
@@ -177,10 +215,10 @@ export default function RevisionScreen({ navigation, finishSession }) {
     setIsFinishing(true);
     setIsRunning(false);
 
-    // Save the revision progress.
+    // Save the revision time and earned XP.
     finishSession(finalSeconds);
 
-    // Remove the Live Activity from the Lock Screen.
+    // Remove the Lock Screen Live Activity.
     if (liveActivityRef.current) {
       await liveActivityRef.current.end("immediate");
       liveActivityRef.current = null;
@@ -188,7 +226,6 @@ export default function RevisionScreen({ navigation, finishSession }) {
 
     liveTimeRef.current = null;
 
-    // Show the completion screen.
     navigation.navigate("SessionComplete", {
       sessionSeconds: finalSeconds,
     });
